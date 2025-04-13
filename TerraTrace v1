@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""
+TerraTrace Project
+------------------
+Projet open source de détection et de reconstitution d’événements (disparitions, etc.) sur la Terre
+à partir de données satellitaires, en utilisant une IA avancée (IA 2.0), le traitement de big data
+et la fusion d'informations. 
+
+Ce module intègre :
+  - AdvancedVisualizer : visualisations interactives exportables (heatmaps, dashboards, etc.)
+  - MonitoringService  : enregistrement et suivi de métriques et logs
+  - DataPreprocessor   : normalisation et standardisation des données numériques
+  - ClusteringService  : réduction de dimensions via UMAP, clustering avec KMeans/DBSCAN/HDBSCAN et visualisation
+  - MetricsEvaluator   : évaluation des clusters (silhouette, Davies-Bouldin)
+  - MultiModelManager  : gestion multi-modèle (ONNX) pour inférence centralisée
+  - PredictionService  : service de prédiction unifié à partir du gestionnaire de modèles
+  - NextLevelAISystem  : système IA avancé intégrant notamment le traitement NLP et la gestion d’interactions
+
+Auteur : ChatGPT (inspiré par Matthieu Ouvrard et la conversation)
+Date   : 2025-04-13
+"""
+
+import os
+import time
+import json
+import random
+import base64
+import logging
+from collections import defaultdict
+from typing import List, Dict, Any, Optional, Union
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
+
+# Pour le clustering et la réduction de dimensions
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+import umap
+import hdbscan
+
+# Pour l'inférence ONNX
+import onnxruntime as ort
+
+# =============================================================================
+# CONFIGURATION DU LOGGER
+# =============================================================================
+def configure_logger(name: str, log_file: str = "terratrace.log", level: int = logging.INFO) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    if not logger.handlers:
+        fh = logging.FileHandler(log_file)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+    return logger
+
+logger = configure_logger("TerraTrace")
+
+# =============================================================================
+# AdvancedVisualizer
+# =============================================================================
+class AdvancedVisualizer:
+    """
+    Génère des visualisations avancées interactives et exportables.
+    """
+    def __init__(self, output_dir: str = "visualizations"):
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
+        logger.info(f"AdvancedVisualizer initialisé dans le répertoire : {self.output_dir}")
+
+    def generate_heatmap(self, data: List[List[float]], x_labels: List[str], y_labels: List[str], title: str) -> go.Figure:
+        if len(data) != len(y_labels) or any(len(row) != len(x_labels) for row in data):
+            raise ValueError("Les dimensions des données et des labels doivent correspondre.")
+        fig = go.Figure(data=go.Heatmap(z=data, x=x_labels, y=y_labels, colorscale="Viridis"))
+        fig.update_layout(title=title, template="plotly_white")
+        logger.info("Heatmap générée avec succès.")
+        return fig
+
+    def save_figure(self, fig: go.Figure, file_name: str) -> str:
+        file_path = os.path.join(self.output_dir, file_name)
+        fig.write_html(file_path)
+        logger.info(f"Figure sauvegardée : {file_path}")
+        return file_path
+
+# =============================================================================
+# MonitoringService
+# =============================================================================
+class MonitoringService:
+    """
+    Service de monitoring pour centraliser les métriques et logs.
+    """
+    def __init__(self):
+        self.metrics = {}
+
+    def log_metric(self, name: str, value: Any):
+        self.metrics[name] = value
+        logger.info(f"Métrique enregistrée : {name} = {value}")
+
+    def track_execution_time(self, func):
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            result = func(*args, **kwargs)
+            elapsed = time.time() - start
+            self.log_metric(f"{func.__name__}_execution_time", elapsed)
+            logger.info(f"Temps d'exécution de {func.__name__}: {elapsed:.2f} sec")
+            return result
+        return wrapper
+
+    def get_metrics(self) -> Dict[str, Any]:
+        return self.metrics
+
+# =============================================================================
+# DataPreprocessor
+# =============================================================================
+class DataPreprocessor:
+    """
+    Prétraite les données numériques en effectuant une standardisation puis une normalisation.
+    """
+    def __init__(self, normalize: bool = True, standardize: bool = True):
+        self.normalize = normalize
+        self.standardize = standardize
+
+    def preprocess(self, data: Union[List[List[float]], np.ndarray]) -> np.ndarray:
+        data = np.array(data)
+        if self.standardize:
+            data = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
+        if self.normalize:
+            data = (data - np.min(data, axis=0)) / (np.max(data, axis=0) - np.min(data, axis=0))
+        logger.info("Données prétraitées.")
+        return data
+
+# =============================================================================
+# MetricsEvaluator
+# =============================================================================
+class MetricsEvaluator:
+    """
+    Évalue la qualité des clusters à l'aide de métriques telles que le score de silhouette et l'indice de Davies-Bouldin.
+    """
+    def evaluate_clustering(self, embeddings: np.ndarray, labels: List[int]) -> Dict[str, float]:
+        if len(set(labels)) <= 1:
+            raise ValueError("Impossible d'évaluer le clustering avec moins de 2 clusters.")
+        sil_score = silhouette_score(embeddings, labels)
+        db_index = davies_bouldin_score(embeddings, labels)
+        logger.info("Évaluation du clustering terminée.")
+        return {"silhouette_score": sil_score, "davies_bouldin_index": db_index}
+
+# =============================================================================
+# ClusteringService
+# =============================================================================
+class ClusteringService:
+    """
+    Service avancé pour la réduction de dimensions et le clustering, avec visualisations interactives.
+    """
+    def __init__(self, n_neighbors: int = 15, min_dist: float = 0.1, n_components: int = 2, random_state: int = 42):
+        self.reducer = umap.UMAP(n_neighbors=n_neighbors, min_dist=min_dist, n_components=n_components, random_state=random_state)
+        logger.info(f"ClusteringService initialisé avec une réduction en {n_components}D.")
+
+    def reduce_dimensions(self, embeddings: Union[List[List[float]], np.ndarray]) -> np.ndarray:
+        embeddings = np.array(embeddings)
+        logger.info("Réduction de dimensions via UMAP en cours…")
+        reduced = self.reducer.fit_transform(embeddings)
+        logger.info("Réduction terminée.")
+        return reduced
+
+    def apply_clustering(self, embeddings: np.ndarray, method: str = "kmeans", **kwargs) -> Dict[str, Any]:
+        logger.info(f"Application du clustering avec la méthode : {method}.")
+        if method == "kmeans":
+            n_clusters = kwargs.get("n_clusters", 5)
+            model = KMeans(n_clusters=n_clusters, random_state=42)
+        elif method == "dbscan":
+            eps = kwargs.get("eps", 0.5)
+            min_samples = kwargs.get("min_samples", 5)
+            model = DBSCAN(eps=eps, min_samples=min_samples)
+        elif method == "hdbscan":
+            min_cluster_size = kwargs.get("min_cluster_size", 5)
+            model = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
+        else:
+            raise ValueError("Méthode de clustering non supportée.")
+        labels = model.fit_predict(embeddings)
+        cluster_count = len(set(labels)) - (1 if -1 in labels else 0)
+        logger.info(f"Clustering terminé : {cluster_count} clusters trouvés.")
+        return {"labels": labels, "model": model}
+
+    def visualize_clusters(self, embeddings: np.ndarray, labels: List[int], interactive: bool = True, save_path: Optional[str] = None):
+        if embeddings.shape[1] != 2:
+            raise ValueError("Les embeddings doivent être en 2D pour la visualisation.")
+        logger.info("Génération de la visualisation des clusters.")
+        if interactive:
+            fig = px.scatter(x=embeddings[:, 0], y=embeddings[:, 1], color=labels,
+                             title="Visualisation Interactive des Clusters",
+                             labels={"x": "UMAP Dim 1", "y": "UMAP Dim 2", "color": "Cluster"})
+            if save_path:
+                fig.write_html(save_path)
+                logger.info(f"Visualisation interactive sauvegardée sous {save_path}.")
+            fig.show()
+        else:
+            plt.figure(figsize=(10, 8))
+            sc = plt.scatter(embeddings[:, 0], embeddings[:, 1], c=labels, cmap="tab10", s=30)
+            plt.title("Visualisation Statique des Clusters")
+            plt.xlabel("UMAP Dim 1")
+            plt.ylabel("UMAP Dim 2")
+            plt.colorbar(sc, label="Cluster")
+            if save_path:
+                plt.savefig(save_path)
+                logger.info(f"Visualisation statique sauvegardée sous {save_path}.")
+            else:
+                plt.show()
+
+    def cluster_and_visualize(self, embeddings: Union[List[List[float]], np.ndarray], method: str = "kmeans",
+                              interactive: bool = True, **kwargs) -> Dict[str, Any]:
+        logger.info("Pipeline complet de clustering démarré.")
+        reduced = self.reduce_dimensions(embeddings)
+        clustering_result = self.apply_clustering(reduced, method, **kwargs)
+        self.visualize_clusters(reduced, clustering_result["labels"], interactive, kwargs.get("save_path"))
+        return {"reduced_embeddings": reduced, **clustering_result}
+
+# =============================================================================
+# MultiModelManager
+# =============================================================================
+class MultiModelManager:
+    """
+    Gestionnaire pour plusieurs modèles ONNX, avec support pour le chargement, la validation des entrées et l'inférence.
+    """
+    def __init__(self):
+        self.models = {}
+        logger.info("MultiModelManager initialisé.")
+
+    def load_model(self, model_name: str, model_path: str, device: str = "auto"):
+        try:
+            device_provider = "CUDAExecutionProvider" if (device == "gpu" or (device == "auto" and ort.get_device() == "GPU")) else "CPUExecutionProvider"
+            session = ort.InferenceSession(model_path, providers=[device_provider])
+            self.models[model_name] = {
+                "session": session,
+                "input_metadata": {inp.name: inp.shape for inp in session.get_inputs()},
+                "output_metadata": {out.name: out.shape for out in session.get_outputs()},
+            }
+            logger.info(f"Modèle '{model_name}' chargé depuis {model_path} sur {device_provider}.")
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement du modèle '{model_name}': {e}")
+
+    def unload_model(self, model_name: str):
+        if model_name in self.models:
+            del self.models[model_name]
+            logger.info(f"Modèle '{model_name}' déchargé.")
+        else:
+            logger.warning(f"Modèle '{model_name}' non trouvé.")
+
+    def list_models(self) -> List[str]:
+        logger.info("Liste des modèles chargés demandée.")
+        return list(self.models.keys())
+
+    def validate_input(self, model_name: str, input_data: Dict[str, Any]) -> bool:
+        if model_name not in self.models:
+            logger.error(f"Le modèle '{model_name}' n'est pas chargé.")
+            return False
+        model = self.models[model_name]
+        for key, value in input_data.items():
+            if key not in model["input_metadata"]:
+                logger.error(f"Clé d'entrée invalide: {key}. Attendu : {list(model['input_metadata'].keys())}.")
+                return False
+            if len(value.shape) != len(model["input_metadata"][key]):
+                logger.error(f"Inadéquation de forme pour l'entrée '{key}': {value.shape} vs {model['input_metadata'][key]}.")
+                return False
+        logger.info(f"Validation des entrées réussie pour le modèle '{model_name}'.")
+        return True
+
+    def predict(self, model_name: str, input_data: Dict[str, Any]) -> List[Any]:
+        if not self.validate_input(model_name, input_data):
+            raise ValueError(f"Les données d'entrée pour le modèle '{model_name}' sont invalides.")
+        try:
+            logger.info(f"Exécution de l'inférence pour le modèle '{model_name}'.")
+            session = self.models[model_name]["session"]
+            outputs = session.run(None, input_data)
+            logger.info("Inférence terminée.")
+            return outputs
+        except Exception as e:
+            logger.error(f"Erreur d'inférence pour le modèle '{model_name}': {e}")
+            return []
+
+# =============================================================================
+# PredictionService
+# =============================================================================
+class PredictionService:
+    """
+    Service centralisé pour exécuter des prédictions à partir d'un MultiModelManager.
+    """
+    def __init__(self, model_manager: MultiModelManager):
+        self.model_manager = model_manager
+
+    def predict(self, model_name: str, input_data: Dict[str, Any]) -> Any:
+        if model_name not in self.model_manager.list_models():
+            raise ValueError(f"Le modèle '{model_name}' n'est pas chargé.")
+        logger.info(f"Prédiction demandée pour le modèle '{model_name}'.")
+        return self.model_manager.predict(model_name, input_data)
+
+# =============================================================================
+# NextLevelAISystem
+# =============================================================================
+class NextLevelAISystem:
+    """
+    Système d'IA avancé intégrant la gestion multi-modèle, le traitement NLP et d'autres outils pour l'analyse.
+    """
+    def __init__(self):
+        self.model_manager = MultiModelManager()
+        self.prediction_service = PredictionService(self.model_manager)
+        # Chargement des modèles par défaut (exemple, à remplacer par vos fichiers ONNX)
+        # self.model_manager.load_model("sentiment", "sentiment_model.onnx")
+        # self.model_manager.load_model("intent", "intent_model.onnx")
+        logger.info("NextLevelAISystem initialisé.")
+
+    def process_message(self, user_id: str, user_message: str, language: str = "auto") -> Dict[str, Any]:
+        # Traitement simple : conversion en minuscules (plus des étapes NLP peuvent être ajoutées)
+        processed_message = user_message.lower()
+        logger.info(f"Message traité pour l'utilisateur {user_id}: {processed_message}")
+        # Exemple de prédiction fictive
+        prediction = {"dummy_prediction": 1}
+        return {"processed_message": processed_message, "prediction": prediction}
+
+# =============================================================================
+# MAIN – Pipeline de Démonstration TerraTrace
+# =============================================================================
+def main():
+    logger.info("Démarrage du projet TerraTrace...")
+    
+    # Exemple de jeu de données simulé (10 échantillons, 5 caractéristiques)
+    sample_data = np.random.rand(10, 5)
+    # Exemple de texte décrivant un événement (ex : disparition détectée via satellites)
+    sample_text = "Bonjour, une disparition a été détectée dans la zone nord de la ville."
+    
+    # Prétraitement des données numériques
+    preprocessor = DataPreprocessor()
+    processed_data = preprocessor.preprocess(sample_data)
+    
+    # Pipeline de clustering
+    clustering_service = ClusteringService()
+    clustering_results = clustering_service.cluster_and_visualize(processed_data,
+                                                                  method="kmeans",
+                                                                  n_clusters=3,
+                                                                  interactive=False)
+    
+    # Évaluation des clusters
+    evaluator = MetricsEvaluator()
+    metrics = evaluator.evaluate_clustering(clustering_results["reduced_embeddings"],
+                                              clustering_results["labels"])
+    
+    # Génération d'une heatmap avec AdvancedVisualizer
+    visualizer = AdvancedVisualizer()
+    heatmap = visualizer.generate_heatmap(
+        data=processed_data.tolist(),
+        x_labels=[f"Feature {i}" for i in range(processed_data.shape[1])],
+        y_labels=[f"Sample {i}" for i in range(processed_data.shape[0])],
+        title="Data Heatmap"
+    )
+    visualizer.save_figure(heatmap, "data_heatmap.html")
+    
+    # Démonstration du système IA avancé NextLevelAISystem
+    next_ai = NextLevelAISystem()
+    message_result = next_ai.process_message("user123", sample_text)
+    
+    # Affichage des résultats et enregistrement des métriques
+    logger.info("Métriques de clustering: " + json.dumps(metrics))
+    logger.info("Résultat du traitement du message par NextLevelAISystem: " + json.dumps(message_result))
+    
+    print("TerraTrace pipeline exécuté avec succès. Vérifiez le dossier 'visualizations' et le fichier de logs.")
+
+if __name__ == "__main__":
+    main()
