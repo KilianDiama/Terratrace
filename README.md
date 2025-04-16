@@ -1,78 +1,73 @@
-TerraTrace
-TerraTrace est un projet open source d’observation de la Terre qui utilise des données satellitaires, de l’IA avancée (IA 2.0) et des techniques de big data pour tenter de reconstituer les événements – jusqu’au mètre près – qui se sont déroulés sur notre planète. Le projet a pour ambition de faciliter la recherche et la détection d’événements comme les disparitions, tout en garantissant une utilisation éthique et non commerciale du logiciel.
+# 🌍 Terratrace
 
-Fonctionnalités
-Surveillance avancée
-Analyse et reconstitution d’images satellites à haute résolution pour revisiter les événements passés sur Terre.
+**Terratrace** est une application conçue pour suivre, analyser et visualiser l'impact environnemental de différentes activités humaines, que ce soit dans un cadre personnel, professionnel ou éducatif.
 
-Clustering et Visualisation
-Réduction de dimensions et clustering des données pour une visualisation interactive (heatmaps, scatter plots, etc.), facilitant l’analyse approfondie.
+---
 
-Monitoring et Suivi
-Enregistrement des métriques et logs pour suivre la performance des traitements et analyses.
+## 🌱 À propos
 
-Gestion Multi-Modèles
-Gestion centralisée de plusieurs modèles ONNX et unification des prédictions via un service dédié.
+Ce projet vise à sensibiliser et fournir des outils pratiques pour comprendre :
 
-Système d’IA Avancé
-Intégration de composants NLP et d’interfaces pour une meilleure interaction et analyse des données.
+- L’empreinte carbone de nos actions
+- La consommation énergétique
+- L’impact des transports, de l’alimentation, du numérique, etc.
 
-Licence
-Le projet est publié sous la Licence TerraTrace Non Commerciale et Éthique qui impose notamment :
+Avec **Terratrace**, tu traces ta relation avec la planète en données concrètes.
 
-Une utilisation strictement non commerciale ;
+---
 
-L’interdiction de créer des œuvres dérivées ou modifications à diffuser ;
+## ✨ Fonctionnalités principales
 
-L’autorisation pour les forces de l’ordre et les autorités judiciaires uniquement à partir de la publication officielle sur GitHub.
+- 📊 Calcul d'empreinte carbone personnalisée
+- 🛤️ Simulation d’activités (déplacements, habitudes de consommation)
+- 🧠 Recommandations générées par IA pour réduire son impact
+- 🖼️ Interface graphique intuitive avec résumés visuels
+- 📁 Sauvegarde & exportation des données utilisateur
 
-Elle garantit également que l'utilisation se fera de manière éthique (avec justice pour le temps passé) et permet à quiconque souhaitant contribuer – que ce soit 3%, 30% ou même 70% (xD) – de le faire dans le respect des conditions.
+---
 
-Note : Ce texte est proposé à titre indicatif. N’hésitez pas à consulter un spécialiste juridique pour affiner la licence selon vos besoins.
+## 🧰 Technologies utilisées
 
-Comment Contribuer
-Nous apprécions toutes les contributions à TerraTrace, que vous puissiez offrir 3%, 30% ou même 70% de votre temps (xD) ! Voici comment vous pouvez contribuer :
+- Python
+- Tkinter (GUI)
+- Pandas / NumPy
+- OpenAI API (pour recommandations et texte dynamique)
+- (Optionnel) JSON / SQLite pour la sauvegarde locale
 
-Forkez le dépôt sur GitHub.
+---
 
-Créez une branche dédiée à vos améliorations ou corrections.
+## ⚙️ Installation
 
-Soumettez une Pull Request en précisant les modifications apportées.
-
-Assurez-vous que vos modifications respectent la licence et l’esprit éthique du projet.
-
-Installation
-Pour installer et lancer TerraTrace, suivez ces étapes :
-
-Clonez le dépôt :
-
-bash
-Copier
-git clone https://github.com/votre_nom/terratrace.git
-Accédez au dossier et installez les dépendances :
-
-bash
-Copier
-cd terratrace
+```bash
+git clone https://github.com/KilianDiama/Terratrace.git
+cd Terratrace
 pip install -r requirements.txt
-Lancez le projet :
-
+▶️ Lancer le projet
 bash
 Copier
-python main.py
-Utilisation
-TerraTrace vous permet de lancer des pipelines de traitement d’images satellitaires et d’analyse de données, comprenant :
+Modifier
+python terratrace.py
+Tu verras apparaître une interface qui te permet d'entrer tes données et de recevoir en retour ton impact + des conseils.
 
-La normalisation et le prétraitement des données,
+📸 Aperçu visuel
+Ajoute une ou deux captures d’écran ici pour montrer la GUI et les stats générées.
 
-L’application d’algorithmes de clustering et la génération de visualisations interactives,
+🧭 Roadmap (à venir)
+🔒 Authentification utilisateur
 
-L’exécution de prédictions via des modèles ONNX,
+🌐 Version web via Flask ou Next.js
 
-Le suivi des métriques et l’enregistrement de logs pour une meilleure traçabilité.
+📱 Application mobile companion (React Native)
 
-Remerciements
-Merci à toutes les personnes qui pourraient contribuer à TerraTrace et à la communauté open source. Vos contributions, qu’elles soient de 3%, 30% ou même 70% (xD), sont essentielles à l’amélioration de ce projet ambitieux.
+📬 Intégration d’envoi de rapports mensuels par mail
 
-Si vous avez des questions ou des suggestions, n’hésitez pas à créer une issue sur GitHub. Ensemble, faisons de TerraTrace un outil puissant et éthique pour comprendre notre planète !
+💚 Pourquoi ce projet ?
+Parce qu’on peut coder ET être conscient.
+Parce que l’écologie a besoin de data, et les gens de simplicité.
+Terratrace, c’est rendre l’impact visible pour mieux le transformer.
 
+📜 Licence
+
+
+✍️ Par Diamajax
+“Il n’y a pas de planète B, mais il y a des apps A+.” — Diamajax 🌎
